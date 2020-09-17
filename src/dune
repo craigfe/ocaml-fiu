@@ -1,0 +1,6 @@
+(library
+ (name fiu)
+ (public_name fiu)
+ (libraries fiu.ffi ctypes ctypes.stubs ctypes.foreign unix-errno
+            unix-errno.unix)
+(preprocess (pps ppx_enumerate)))

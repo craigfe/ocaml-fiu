@@ -1,0 +1,3 @@
+pin-depends: [
+  "ppx_alcotest.dev" "git+https//github.com/CraigFe/ppx_alcotest#50e777b8b164b38163acec3bdad0f2aaec613eef"
+]

@@ -1,0 +1,35 @@
+(library
+ (name fiu_bindings)
+ (public_name fiu.bindings)
+ (modules fiu_bindings)
+ (libraries ctypes))
+
+(executable
+ (name stubgen)
+ (modules stubgen)
+ (libraries fiu.bindings ctypes ctypes.stubs))
+
+(rule
+ (targets stubs.c)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{exe:stubgen.exe} -c))))
+
+(rule
+ (targets stubs.ml)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{exe:stubgen.exe} -ml))))
+
+(library
+ (name fiu_ffi)
+ (public_name fiu.ffi)
+ (modules fiu_ffi stubs)
+ (foreign_stubs
+  (language c)
+  (names stubs))
+ (c_library_flags
+  (:standard -lfiu))
+ (libraries fiu.bindings ctypes ctypes.stubs ctypes.foreign))
