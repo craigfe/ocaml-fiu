@@ -8,6 +8,8 @@ doc: "https://CraigFe.github.io/fiu/"
 bug-reports: "https://github.com/CraigFe/fiu/issues"
 depends: [
   "dune" {>= "2.7"}
+  "alcotest" {with-test}
+  "ppx_alcotest" {with-test}
   "odoc" {with-doc}
 ]
 build: [
@@ -25,6 +27,3 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/CraigFe/fiu.git"
-pin-depends: [
-  "ppx_alcotest.dev" "git+https//github.com/CraigFe/ppx_alcotest#50e777b8b164b38163acec3bdad0f2aaec613eef"
-]

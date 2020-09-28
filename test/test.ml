@@ -1,4 +1,4 @@
-let () = Fiu.init ()
+module P = Fiu_posix
 
 let check_raises name err f =
   match f () with
@@ -6,22 +6,25 @@ let check_raises name err f =
       Alcotest.failf
         "%s: expected exception matching Unix.Unix_error (%s, _, _), but got \
          none."
-        name
-        (Fiu.Posix.stdlib_to_string err)
+        name (P.stdlib_to_string err)
   | exception Unix.Unix_error (err', _, _) when err = err' -> ()
   | exception Unix.Unix_error (err', _, _) ->
       Alcotest.failf "%s: expecting exception `%s', but got `%s'" name
-        (Fiu.Posix.stdlib_to_string err)
-        (Fiu.Posix.stdlib_to_string err')
+        (P.stdlib_to_string err) (P.stdlib_to_string err')
 
-[%%t
+[%%test
 module Points = struct
-  (* let%test memoized () =
-   *   let n1, n2 = ("x" ^ "y", "x" ^ "y") in
-   *   assert (n1 = n2 && n1 != n2 (\* Ensure inputs are not physically equal *\));
-   *   Alcotest.(check bool)
-   *     "Calls to `Point.v` are memoized" true
-   *     (Fiu.Point.v ~name:n1 == Fiu.Point.v ~name:n2) *)
+  let%test disable_before_enable () = Fiu.Point.(disable (v ~name:"foo"))
+
+  let%test enable_before_init () =
+    let p = Fiu.Point.v ~name:"foo" in
+    Fiu.Point.enable p ~code:Signed.SInt.one;
+    Fiu.Point.disable p
+
+  let%test double_init () =
+    Fiu.init ();
+    Fiu.init ();
+    ()
 
   let%test basic () =
     let p = Fiu.Point.v ~name:"x" in
@@ -35,54 +38,100 @@ end]
 
 [%%test
 module Posix = struct
-  (* These tests cover only the [Fiu.Posix] fail points that are convenient to
+  (* These tests cover only the [Fiu_posix] fail points that are convenient to
      test via the [Unix] module. *)
 
   let check_all (name, point, (f : unit -> unit)) =
-    let point = Fiu.Posix.unsound_coerce point in
-    Fiu.Posix.Error.all
+    let point = P.unsound_coerce point in
+    P.Error.all_of_known
     |> List.iter (fun err ->
+           let err = (err :> P.Error.t) in
            match err with
            | `ewouldblock (* aliases with [`eagain] *) -> ()
            | _ ->
-               let unix_error = Fiu.Posix.error_to_stdlib err in
+               let unix_error = P.error_to_stdlib err in
                check_raises name unix_error (fun () ->
-                   Fiu.Posix.(with_faulty ~fn:point) ~err f))
+                   P.(with_faulty ~fn:point) ~err f))
 
   let dummy_fd = Unix.stdout
 
-  let%test close () =
-    check_all ("close", Fiu.Posix.close, fun () -> Unix.close dummy_fd)
-
-  let%test fsync () =
-    check_all ("fsync", Fiu.Posix.fsync, fun () -> Unix.fsync dummy_fd)
-
-  let%test unlink () =
-    check_all ("unlink", Fiu.Posix.unlink, fun () -> Unix.unlink "")
+  let%test close () = check_all ("close", P.close, fun () -> Unix.close dummy_fd)
+  let%test fsync () = check_all ("fsync", P.fsync, fun () -> Unix.fsync dummy_fd)
 
   let%test read () =
     let f () = ignore (Unix.read dummy_fd Bytes.empty 0 0 : int) in
-    check_all ("read", Fiu.Posix.read, f)
+    check_all ("read", P.read, f)
 
   let%test write () =
     let f () = ignore (Unix.write dummy_fd (Bytes.make 1 '\x00') 0 1 : int) in
-    check_all ("write", Fiu.Posix.write, f)
+    check_all ("write", P.write, f)
 
   let%test truncate () =
     let f () = Unix.truncate "" 0 in
-    check_all ("truncate", Fiu.Posix.truncate, f)
+    check_all ("truncate", P.truncate, f)
 
   let%test ftruncate () =
     let f () = Unix.ftruncate dummy_fd 0 in
-    check_all ("ftruncate", Fiu.Posix.ftruncate, f)
+    check_all ("ftruncate", P.ftruncate, f)
 
-  let%test opendir () =
-    let f () = ignore (Unix.opendir "" : Unix.dir_handle) in
-    check_all ("opendir", Fiu.Posix.opendir, f)
+  let%test unlink () = check_all ("unlink", P.unlink, fun () -> Unix.unlink "")
 
-  let dummy_dir_handle = Unix.opendir (Filename.get_temp_dir_name ())
+  let%test rename () =
+    check_all ("rename", P.rename, fun () -> Unix.rename "" "")
 
-  (* let%test readdir () =
-   *   let f () = ignore (Unix.readdir dummy_dir_handle : string) in
-   *   check_all ("readdir", Fiu.Posix.readdir, f) *)
+  let%test socket () =
+    let f () = ignore (Unix.socket PF_UNIX SOCK_STREAM 0 : Unix.file_descr) in
+    check_all ("socket", P.socket, f)
+
+  let%test bind () =
+    let f () = Unix.bind dummy_fd (ADDR_UNIX "") in
+    check_all ("bind", P.bind, f)
+
+  let%test listen () =
+    let f () = Unix.listen dummy_fd 0 in
+    check_all ("listen", P.listen, f)
+
+  (* let%test accept () =
+   *   let f () = ignore (Unix.accept dummy_fd : _ * _) in
+   *   check_all ("accept", P.accept, f) *)
+
+  let%test connect () =
+    let f () = Unix.connect dummy_fd (ADDR_UNIX "") in
+    check_all ("connect", P.connect, f)
+
+  let%test recv () =
+    let f () = ignore (Unix.recv dummy_fd Bytes.empty 0 0 [] : int) in
+    check_all ("recv", P.recv, f)
+
+  let%test recvfrom () =
+    let f () = ignore (Unix.recvfrom dummy_fd Bytes.empty 0 0 [] : _ * _) in
+    check_all ("recvfrom", P.recvfrom, f)
+
+  let%test send () =
+    let f () = ignore (Unix.send dummy_fd Bytes.empty 0 0 [] : int) in
+    check_all ("send", P.send, f)
+
+  let%test shutdown () =
+    let f () = Unix.shutdown dummy_fd SHUTDOWN_ALL in
+    check_all ("shutdown", P.shutdown, f)
+
+  let%test select () =
+    let f () = ignore (Unix.select [] [] [] 0. : _ * _ * _) in
+    check_all ("select", P.select, f)
+
+  let%test fork () =
+    let f () = ignore (Unix.fork () : int) in
+    check_all ("fork", P.fork, f)
+
+  let%test wait () =
+    let f () = ignore (Unix.wait () : _ * _) in
+    check_all ("wait", P.wait, f)
+
+  let%test waitpid () =
+    let f () = ignore (Unix.waitpid [] 0 : _ * _) in
+    check_all ("waitpid", P.waitpid, f)
+
+  let%test kill () =
+    let f () = Unix.kill 0 0 in
+    check_all ("kill", P.kill, f)
 end]

@@ -1,5 +1,4 @@
 open Common
-module Posix = Posix
 module Point = Point
 
 let init () = Fiu_ffi.init Unsigned.UInt.zero |> check_zero ~f:"fiu_init"

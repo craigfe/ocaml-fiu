@@ -1,4 +1,5 @@
-include Posix_intf
+include Fiu_posix_intf
+open Fiu
 
 let error_of_stdlib : Unix.error -> Error.t = function
   | E2BIG -> `e2big
@@ -211,6 +212,7 @@ let error_to_stdlib : [< Error.t ] -> Unix.error = function
   | `ehostunreach -> EHOSTUNREACH
   | `eloop -> ELOOP
   | `eoverflow -> EOVERFLOW
+  | `unknown i -> EUNKNOWNERR (Signed.SInt.to_int i)
 
 let code_of_error : [< Error.t ] -> _ =
  fun e ->
@@ -257,11 +259,13 @@ let truncate = Point.v ~name:"posix/io/rw/truncate"
 let truncate64 = Point.v ~name:"posix/io/rw/truncate"
 let ftruncate = Point.v ~name:"posix/io/rw/ftruncate"
 let ftruncate64 = Point.v ~name:"posix/io/rw/ftruncate"
-let opendir = Point.v ~name:"posix/io/dir/opendir"
-let fdopendir = Point.v ~name:"posix/io/dir/fdopendir"
-let readdir = Point.v ~name:"posix/io/dir/readdir"
-let readdir_r = Point.v ~name:"posix/io/dir/readdir_r"
-let closedir = Point.v ~name:"posix/io/dir/closedir"
+
+(* let opendir = Point.v ~name:"posix/io/dir/opendir"
+ * let fdopendir = Point.v ~name:"posix/io/dir/fdopendir"
+ * let readdir = Point.v ~name:"posix/io/dir/readdir"
+ * let readdir_r = Point.v ~name:"posix/io/dir/readdir_r"
+ * let closedir = Point.v ~name:"posix/io/dir/closedir" *)
+
 let unlink = Point.v ~name:"posix/io/dir/unlink"
 let rename = Point.v ~name:"posix/io/dir/rename"
 let socket = Point.v ~name:"posix/io/net/socket"

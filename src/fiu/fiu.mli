@@ -10,19 +10,15 @@ module Point : sig
   val state : t -> [ `Pass | `Fail of int ]
   (** Get the failure status of a code point. *)
 
+  type mode = [ `Always | `Probability of float | `Pred of unit -> bool ]
+
   val enable :
-    ?mode:[ `Always | `Probability of float | `Pred of unit -> bool ] ->
-    code:code ->
-    ?info:unit Ctypes_static.ptr ->
-    t ->
-    unit
+    ?mode:mode -> code:code -> ?info:unit Ctypes_static.ptr -> t -> unit
   (** Enable a failure point. *)
 
   val disable : t -> unit
   (** Disable a failure point. *)
 end
-
-module Posix = Posix
 
 (** {1 Initialising the library} *)
 

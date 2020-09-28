@@ -23,4 +23,12 @@ let enable ?(mode : mode = `Always) ~code ?info name =
   in
   check_zero ~f:"fiu_enable" status
 
-let disable = Fiu_ffi.Control.disable >> check_zero ~f:"fiu_disable"
+exception Already_disabled of string
+
+let disable name =
+  (* NOTE: [libfiu] does not provide a consistent way to distinguish
+     double-disable from other errors, so it's better to check first and raise
+     a coherent exception. *)
+  match state name with
+  | `Fail _ -> raise (Already_disabled name)
+  | `Pass -> Fiu_ffi.Control.disable name |> check_zero ~f:"fiu_disable"

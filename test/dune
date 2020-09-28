@@ -1,6 +1,6 @@
 (executable
  (name test)
- (libraries fiu alcotest)
+ (libraries fiu fiu-posix alcotest)
  (preprocess
   (pps ppx_alcotest)))
 
@@ -8,7 +8,6 @@
  (alias runtest)
  (action
   (setenv
-    LD_PRELOAD
-    /home/craigfe/t/libfiu/preload/posix/fiu_posix_preload.so
-   ; /usr/lib/fiu_posix_preload.so
+   LD_PRELOAD
+   /usr/lib/fiu_posix_preload.so
    (run %{exe:test.exe}))))

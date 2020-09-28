@@ -9,8 +9,10 @@
 (package
  (name fiu)
  (synopsis "Bindings to the libfiu fault-injection library")
- (description "\
-Bindings to the libfiu fault-injection library
-")
+ (documentation https://CraigFe.github.io/fiu/))
+
+(package
+ (name fiu-posix)
+ (synopsis "Bindings to the libfiu fault-injection library")
  (documentation https://CraigFe.github.io/fiu/)
- (depends alcotest ppx_alcotest))
+ (depends (alcotest :with-test) (ppx_alcotest :with-test)))
